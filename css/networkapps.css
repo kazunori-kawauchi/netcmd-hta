@@ -1,0 +1,49 @@
+body {
+    font-size: 0.8em;
+}
+
+table {
+    width: 90%;
+}
+
+table.args {
+    background-color: #66CCFF;
+}
+table.options {
+    background-color: #FFCC66;
+}
+
+
+table *.cell {
+    padding: 2px;
+    text-align: center;
+    font-size: 0.8em;
+}
+
+table.args *.cell {
+    background-color: #DDEEFF;
+}
+table.options *.cell {
+    background-color: #FFEEDD;
+}
+
+div.cmd {
+    text-align: center;
+}
+
+div.cmd p {
+    width: 90%;
+    border: solid 2px #CC6666;
+    background-color: #FFEEEE;
+    padding: 5px;
+}
+
+div.exec {
+    text-align: center;
+    padding: 5px;
+}
+
+div.result {
+    text-align: center;
+    padding: 5px;
+}

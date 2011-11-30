@@ -1,0 +1,486 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=Shift_JIS">
+
+<hta:application
+  ApplicationName="networkapps"
+  Id="networkapps"
+  MaximizeButton="no"
+/>
+
+<link type="text/css" href="css/smoothness/jquery-ui-1.7.3.custom.css" rel="stylesheet" />
+<link type="text/css" href="css/networkapps.css" rel="stylesheet" />
+
+<script type="text/javascript" src="js/jquery-1.3.2.min.js"></script>
+<script type="text/javascript" src="js/jquery-ui-1.7.3.custom.min.js"></script>
+
+<script language="javascript">
+$(function(){
+
+  $('#tabs').tabs();
+
+})
+
+var appwin_width  = 800;
+var appwin_height = 720;
+
+$(document).ready(function(){
+  window.resizeTo(appwin_width, appwin_height);
+  window.moveTo(
+    (window.screen.width  - appwin_width ) / 2,
+    (window.screen.height - appwin_height) / 2
+    
+  );
+});
+
+</script>
+
+<script language="JScript">
+
+function showOptionTable(cmd) {
+  $("#show_options_" + cmd).hide();
+  $("#hide_options_" + cmd).show();
+  $("#options_" + cmd).show();
+}
+
+function hideOptionTable(cmd) {
+  $("#hide_options_" + cmd).hide();
+  $("#show_options_" + cmd).show();
+  $("#options_" + cmd).hide();
+}
+
+var WshShell = new ActiveXObject("WScript.Shell");
+
+function execNetCmd(cmdtype, allownullargflag) {
+  showCmdline(cmdtype);
+  execNetCmdSub(cmdtype, allownullargflag);
+}
+
+function execNetCmdSub(cmdtype, allownullargflag) {
+  $("#result_" + cmdtype + "_code").hide();
+
+
+  var textareaResult = document.getElementById("result_" + cmdtype);
+  // This string isn't displayed, I think it should be displayed...
+  textareaResult.value = "プログラムを実行中です…";
+
+  cmd = constructCmdline(cmdtype, allownullargflag);
+  if (cmd.match(/^Error:/)) {
+    textareaResult.value = cmd;
+    return -1;
+  }
+
+  var execResult = WshShell.exec(cmd)
+  if (execResult.StdOut.AtEndOfStream == null) {
+    textareaResult.value = "Error";
+    return -1;
+  }
+  textareaResult.value = execResult.StdOut.ReadAll();
+
+  if (execResult.status != 0) {
+    var textareaResultCode = document.getElementById("result_" + cmdtype + "_code");
+    textareaResultCode.value = "終了コード: " + execResult.status;
+
+    $("#result_" + cmdtype + "_code").show();
+  }
+
+
+}
+
+function showCmdline(cmdtype) {
+  var textCmd = document.getElementById("cmd_" + cmdtype);
+
+  textCmd.innerHTML = constructCmdline(cmdtype, true);
+
+}
+function constructCmdline(cmdtype, allownullargflag) {
+  if (cmdtype == "ping") {
+    return constructCmdlinePing(allownullargflag);
+  } else if (cmdtype == "nslookup") {
+    return constructCmdlineNslookup(allownullargflag);
+  } else if (cmdtype == "traceroute") {
+    return constructCmdlineTraceroute(allownullargflag);
+  } else if (cmdtype == "netstat") {
+    return constructCmdlineNetstat(allownullargflag);
+  } else if (cmdtype == "whois") {
+    return constructCmdlineWhois(allownullargflag);
+  }
+}
+
+function constructCmdlinePing(allownullargflag) {
+  var arg_target = document.form_ping.target_ping.value;
+  var args = arg_target;
+
+  if (! allownullargflag && args.match(/^ *$/)) {
+    return "Error: コマンドの実行には引数が必要です。";
+  }
+
+  var option = "";
+
+  var opt_packets = document.form_ping.o_packets_ping.value;
+  var opt_size = document.form_ping.o_size_ping.value;
+  var opt_ttl = document.form_ping.o_ttl_ping.value;
+
+  if (! opt_packets.match(/^ *$/)) {
+    option += " -n " + opt_packets;
+  }
+  if (! opt_size.match(/^ *$/)) {
+    option += " -l " + opt_size;
+  }
+  if (! opt_ttl.match(/^ *$/)) {
+    option += " -i " + opt_ttl;
+  }
+
+  return "ping" + option + " " + args;
+}
+
+function constructCmdlineNslookup(allownullargflag) {
+  var arg_target = document.form_nslookup.target_nslookup.value;
+
+  var args = arg_target;
+  var option = "";
+
+  if (! allownullargflag && args.match(/^ *$/)) {
+    return "Error: コマンドの実行には引数が必要です。";
+  }
+
+  var opt_dnsserver = document.form_nslookup.o_server_nslookup.value;
+
+  if (! opt_dnsserver.match(/^ *$/)) {
+    args += " " + opt_dnsserver;
+  }
+
+  return "nslookup" + option + " " + args;
+}
+
+function constructCmdlineTraceroute(allownullargflag) {
+  var arg_target = document.form_traceroute.target_traceroute.value;
+
+  var args = arg_target;
+  var option = "";
+
+  if (! allownullargflag && args.match(/^ *$/)) {
+    return "Error: コマンドの実行には引数が必要です。";
+  }
+
+  var opt_maxhops = document.form_traceroute.o_maxhops_traceroute.value;
+  var opt_timeout = document.form_traceroute.o_timeout_traceroute.value;
+  var opt_lookup = document.form_traceroute.o_lookup_traceroute;
+
+  if (! opt_maxhops.match(/^ *$/)) {
+    option += " -h " + opt_maxhops;
+  }
+  if (! opt_timeout.match(/^ *$/)) {
+    option += " -w " + opt_timeout;
+  }
+  if (opt_lookup[1].checked && opt_lookup[1].value == "ipaddress") {
+      option += " -d ";
+  }
+
+  return "tracert" + option + " " + args;
+}
+
+function constructCmdlineNetstat(allownullargflag) {
+
+  var option = "";
+
+  if (! allownullargflag && args.match(/^ *$/)) {
+    return "Error: コマンドの実行には引数が必要です。";
+  }
+  
+  var opt_type = document.form_netstat.o_type_netstat;
+  var opt_protocol = document.form_netstat.o_protocol_netstat;
+  var opt_process = document.form_netstat.o_process_netstat;
+  var opt_program = document.form_netstat.o_program_netstat;
+  var opt_lookup = document.form_netstat.o_lookup_netstat;
+
+  if (opt_type[1].checked && opt_type[1].value == "all_connections") {
+    option += " -a ";
+  } else if (opt_type[2].checked && opt_type[2].value == "stat") {
+    option += " -s ";
+  } else if (opt_type[3].checked && opt_type[3].value == "routetable") {
+    option += " -r ";
+  }
+
+  if (opt_protocol[1].checked && opt_protocol[1].value == "tcp") {
+    option += " -p TCP ";
+  } else if (opt_protocol[2].checked && opt_protocol[2].value == "udp") {
+    option += " -p UDP ";
+  } else if (opt_protocol[3].checked && opt_protocol[3].value == "tcp_v6") {
+    option += " -p TCPv6 ";
+  } else if (opt_protocol[4].checked && opt_protocol[4].value == "udp_v6") {
+    option += " -p UDPv6 ";
+  } else if (opt_protocol[5].checked && opt_protocol[5].value == "ip") {
+    option += " -p IP ";
+  } else if (opt_protocol[6].checked && opt_protocol[6].value == "ip_v6") {
+    option += " -p IPv6 ";
+  } else if (opt_protocol[7].checked && opt_protocol[7].value == "icmp") {
+    option += " -p ICMP ";
+  } else if (opt_protocol[8].checked && opt_protocol[8].value == "icmp_v6") {
+    option += " -p ICMPv6 ";
+  }
+
+  if (opt_process[1].checked && opt_process[1].value == "display") {
+    option += " -o ";
+  } 
+
+  if (opt_program[1].checked && opt_program[1].value == "display") {
+    option += " -b ";
+  } 
+
+  if (opt_lookup[1].checked && opt_lookup[1].value == "hostname") {
+    option += " -f ";
+  } 
+
+  return "netstat" + option;
+}
+
+function constructCmdlineWhois(allownullargflag) {
+  var arg_target = document.form_whois.target_whois.value;
+
+  var args = arg_target;
+  var option = "";
+
+  if (! allownullargflag && args.match(/^ *$/)) {
+    return "Error: コマンドの実行には引数が必要です。";
+  }
+
+  var opt_whoisserver = document.form_whois.o_server_whois.value;
+
+  if (! opt_whoisserver.match(/^ *$/)) {
+    args += " " + opt_whoisserver;
+  }
+
+  return ".\\bin\\whois.exe" + option + " " + args;
+}
+
+
+</script>
+</head>
+
+<body>
+
+<div id="tabs">
+  <ul>
+    <li><a href="#tabs-1">ping</a></li>
+    <li><a href="#tabs-2">nslookup</a></li>
+    <li><a href="#tabs-3">traceroute</a></li>
+    <li><a href="#tabs-4">netstat</a></li>
+    <li><a href="#tabs-5">whois</a></li>
+  </ul>
+
+  <div id="tabs-1"> 
+    <form name="form_ping">
+    <table class="args">
+      <tr>
+	<th class="cell">ホスト名 または IPアドレス</th>
+	<td class="cell"><input type="text" name="target_ping" onchange='showCmdline("ping")'></input></td>
+      </tr>
+    </table>
+    <h4><a href="#" id="show_options_ping" onclick='showOptionTable("ping");'>オプションを表示する</a></h4>
+    <h4><a href="#" id="hide_options_ping" onclick='hideOptionTable("ping");' style="display: none">オプションを表示しない</a></h4>
+    <div id="options_ping" style="display: none">
+      <table class="options">
+	<tr>
+	  <th class="cell">パケットの送信数</th>
+	  <td class="cell"><input type="text" name="o_packets_ping" onChange='showCmdline("ping")'></input></td>
+	</tr>
+	<tr>
+	  <th class="cell">パケットのデータサイズ (byte)</th>
+	  <td class="cell"><input type="text" name="o_size_ping" onChange='showCmdline("ping")'></input></td>
+	</tr>
+	<tr>
+	  <th class="cell">Time To Live (TTL)</th>
+	  <td class="cell"><input type="text" name="o_ttl_ping" onChange='showCmdline("ping")'></input></td>
+	</tr>
+      </table>
+    </div>
+    <h4>実行されるコマンド</h4>
+    <div class="cmd"><p id="cmd_ping">ping</p></div>
+    <div class="exec">
+      <input type="button" value="pingを実行する" onclick='execNetCmd("ping", false);'>
+    </div>
+    <h4>実行結果</h4>
+    <div class="result">
+      <textarea id="result_ping_code" rows="1" cols="80" readonly="true" style="display: none"></textarea>
+      <textarea id="result_ping" rows="15" cols="80" readonly="true"></textarea>
+    </div>
+    </form>
+  </div>
+
+  <div id="tabs-2"> 
+    <form name="form_nslookup">
+    <table class="args">
+      <tr>
+	<th class="cell">ホスト名 または IPアドレス</th>
+	<td class="cell"><input type="text" name="target_nslookup" onchange='showCmdline("nslookup")'></input></td>
+      </tr>
+    </table>
+    <h4><a href="#" id="show_options_nslookup" onclick='showOptionTable("nslookup");'>オプションを表示する</a></h4>
+    <h4><a href="#" id="hide_options_nslookup" onclick='hideOptionTable("nslookup");' style="display: none">オプションを表示しない</a></h4>
+    <div id="options_nslookup" style="display: none">
+      <table class="options">
+	<tr>
+	  <th class="cell">使用するDNSサーバ</th>
+	  <td class="cell"><input type="text" name="o_server_nslookup" onChange='showCmdline("nslookup")'></input></td>
+	</tr>
+      </table>
+    </div>
+    <h4>実行されるコマンド</h4>
+    <div class="cmd"><p id="cmd_nslookup">nslookup</p></div>
+    <div class="exec">
+      <input type="button" value="nslookupを実行する" onclick='execNetCmd("nslookup", false);'>
+    </div>
+    <h4>実行結果</h4>
+    <div class="result">
+      <textarea id="result_nslookup_code" rows="1" cols="80" readonly="true" style="display: none"></textarea>
+      <textarea id="result_nslookup" rows="15" cols="80" readonly="true"></textarea>
+    </div>
+    </form>
+  </div>
+
+  <div id="tabs-3"> 
+    <form name="form_traceroute">
+    <table class="args">
+      <tr>
+	<th class="cell">ホスト名 または IPアドレス</th>
+	<td class="cell"><input type="text" name="target_traceroute" onchange='showCmdline("traceroute")'></input></td>
+      </tr>
+    </table>
+    <h4><a href="#" id="show_options_traceroute" onclick='showOptionTable("traceroute");'>オプションを表示する</a></h4>
+    <h4><a href="#" id="hide_options_traceroute" onclick='hideOptionTable("traceroute");' style="display: none">オプションを表示しない</a></h4>
+    <div id="options_traceroute" style="display: none">
+      <table class="options">
+	<tr>
+	  <th class="cell">検索時の最大ホップ数</th>
+	  <td class="cell"><input type="text" name="o_maxhops_traceroute" onChange='showCmdline("traceroute")'></input></td>
+	</tr>
+	<tr>
+	  <th class="cell">タイムアウトまでの待ち時間（ミリ秒）</th>
+	  <td class="cell"><input type="text" name="o_timeout_traceroute" onChange='showCmdline("traceroute")'></input> ms  <br>  ( 1000ms = 1秒 )</td>
+	</tr>
+	<tr>
+	  <th class="cell">ホスト名の解決</th>
+	  <td class="cell">
+	    <input type="radio" name="o_lookup_traceroute" value="hostname" checked="checked" onClick='showCmdline("traceroute")'></input> ホスト名で表示する / 
+	    <input type="radio" name="o_lookup_traceroute" value="ipaddress" onClick='showCmdline("traceroute")'></input> IPアドレスで表示する
+	  </td>
+	</tr>
+      </table>
+    </div>
+    <h4>実行されるコマンド</h4>
+    <div class="cmd"><p id="cmd_traceroute">tracert</p></div>
+    <div class="exec">
+      <input type="button" value="tracerouteを実行する" onclick='execNetCmd("traceroute", false);'>
+    </div>
+    <h4>実行結果</h4>
+    <div class="result">
+      <textarea id="result_traceroute_code" rows="1" cols="80" readonly="true" style="display: none"></textarea>
+      <textarea id="result_traceroute" rows="15" cols="80" readonly="true"></textarea>
+    </div>
+    </form>
+  </div>
+
+  <div id="tabs-4"> 
+    <form name="form_netstat">
+    <h4><a href="#" id="show_options_netstat" onclick='showOptionTable("netstat");' style="display: none">オプションを表示する</a></h4>
+    <h4><a href="#" id="hide_options_netstat" onclick='hideOptionTable("netstat");'>オプションを表示しない</a></h4>
+    <div id="options_netstat">
+      <table class="options">
+	<tr>
+	  <th class="cell">表示内容</th>
+	  <td class="cell">
+	    <input type="radio" name="o_type_netstat" value="default" checked="checked" onClick='showCmdline("netstat")'></input> ネットワークの接続状況 <br>
+	    <input type="radio" name="o_type_netstat" value="all_connections" onClick='showCmdline("netstat")'></input> ネットワークの接続状況 + 待ち受け状況 <br>
+	    <input type="radio" name="o_type_netstat" value="stat" onClick='showCmdline("netstat")'></input> ネットワークの統計情報 <br>
+	    <input type="radio" name="o_type_netstat" value="routetable" onClick='showCmdline("netstat")'></input> ネットワークテーブル情報 <br>
+	  </td>
+	</tr>
+	<tr>
+	  <th class="cell">プロトコル</th>
+	  <td class="cell">
+	    <input type="radio" name="o_protocol_netstat" value="all" checked="checked" onClick='showCmdline("netstat")'></input> プロトコルを指定しない / 
+	    <input type="radio" name="o_protocol_netstat" value="tcp" onClick='showCmdline("netstat")'></input> TCP / 
+	    <input type="radio" name="o_protocol_netstat" value="udp" onClick='showCmdline("netstat")'></input> UDP / 
+	    <input type="radio" name="o_protocol_netstat" value="tcp_v6" onClick='showCmdline("netstat")'></input> TCPv6 / 
+	    <input type="radio" name="o_protocol_netstat" value="udp_v6" onClick='showCmdline("netstat")'></input> UDPv6 <br>
+            (統計情報の出力時のみ有効：
+	    <input type="radio" name="o_protocol_netstat" value="ip" onClick='showCmdline("netstat")'></input> IP /
+	    <input type="radio" name="o_protocol_netstat" value="ip_v6" onClick='showCmdline("netstat")'></input> IPv6 / 
+	    <input type="radio" name="o_protocol_netstat" value="icmp" onClick='showCmdline("netstat")'></input> ICMP /
+	    <input type="radio" name="o_protocol_netstat" value="icmp_v6" onClick='showCmdline("netstat")'></input> ICMPv6
+	    )
+	  </td>
+	</tr>
+	<tr>
+	  <th class="cell">プロセスIDの表示</th>
+	  <td class="cell">
+	    <input type="radio" name="o_process_netstat" value="default" checked="checked" onClick='showCmdline("netstat")'></input> 各接続と関連のあるプロセスIDを表示しない <br>
+	    <input type="radio" name="o_process_netstat" value="display" onClick='showCmdline("netstat")'></input> 各接続と関連のあるプロセスIDを表示する
+	  </td>
+	</tr>
+	<tr>
+	  <th class="cell">プログラム名の表示</th>
+	  <td class="cell">
+	    <input type="radio" name="o_program_netstat" value="default" checked="checked" onClick='showCmdline("netstat")'></input> 各接続と関連のあるプログラム名を表示しない <br>
+	    <input type="radio" name="o_program_netstat" value="display" onClick='showCmdline("netstat")'></input> 各接続と関連のあるプログラムを表示する
+	  </td>
+	</tr>
+	<tr>
+	  <th class="cell">ホスト名の表示</th>
+	  <td class="cell">
+	    <input type="radio" name="o_lookup_netstat" value="default" checked="checked" onClick='showCmdline("netstat")'></input> IPアドレスで表示する <br>
+	    <input type="radio" name="o_lookup_netstat" value="hostname" onClick='showCmdline("netstat")'></input> ホスト名で表示する
+	  </td>
+	</tr>
+      </table>
+    </div>
+    <h4>実行されるコマンド</h4>
+    <div class="cmd"><p id="cmd_netstat">netstat</p></div>
+    <div class="exec">
+      <input type="button" value="netstatを実行する" onclick='execNetCmd("netstat", true);'>
+    </div>
+    <h4>実行結果</h4>
+    <div class="result">
+      <textarea id="result_netstat_code" rows="1" cols="80" readonly="true" style="display: none"></textarea>
+      <textarea id="result_netstat" rows="15" cols="80" readonly="true"></textarea>
+    </div>
+    </form>
+  </div>
+
+  <div id="tabs-5">
+    <form name="form_whois">
+    <table class="args">
+      <tr>
+	<th class="cell">ドメイン名</th>
+	<td class="cell"><input type="text" name="target_whois" onchange='showCmdline("whois")'></input></td>
+      </tr>
+    </table>
+    <h4><a href="#" id="show_options_whois" onclick='showOptionTable("whois");'>オプションを表示する</a></h4>
+    <h4><a href="#" id="hide_options_whois" onclick='hideOptionTable("whois");' style="display: none">オプションを表示しない</a></h4>
+    <div id="options_whois" style="display: none">
+      <table class="options">
+	<tr>
+	  <th class="cell">使用するWhoisサーバ</th>
+	  <td class="cell"><input type="text" name="o_server_whois" onChange='showCmdline("whois")'></input></td>
+	</tr>
+      </table>
+    </div>
+    <h4>実行されるコマンド</h4>
+    <div class="cmd"><p id="cmd_whois">whois</p></div>
+    <div class="exec">
+      <input type="button" value="whoisを実行する" onclick='execNetCmd("whois", false);'>
+    </div>
+    <h4>実行結果</h4>
+    <div class="result">
+      <textarea id="result_whois_code" rows="1" cols="80" readonly="true" style="display: none"></textarea>
+      <textarea id="result_whois" rows="15" cols="80" readonly="true"></textarea>
+    </div>
+    </form>
+  </div>
+
+</div>
+
+</body>
+
+</html>
