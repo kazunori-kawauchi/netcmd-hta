@@ -4,3 +4,13 @@
 ============================================================
 
 This HTA application is a GUI tool to run commands and show the result.
+
+==============================
+About 'whois' command
+==============================
+
+Usually 'whois' isn't install on Windows OS. You can get the command from
+
+http://technet.microsoft.com/ja-jp/sysinternals/bb897435
+
+and put 'whois.exe' into "netcmd-hta/bin/" folder.
